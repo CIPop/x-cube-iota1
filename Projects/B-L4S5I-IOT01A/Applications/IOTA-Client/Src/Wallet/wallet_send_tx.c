@@ -48,6 +48,7 @@ int wallet_send_tx (void) {
   byte_t recv[IOTA_ADDRESS_BYTES];
   memset(recv, 0, sizeof(recv));
   iota_wallet_t *wallet = NULL;
+  uint64_t value = 0;
 
   if (strlen(my_seed) != 64) {
     printf("invalid seed string, it should be a 64-character-string..\n");
@@ -57,12 +58,6 @@ int wallet_send_tx (void) {
   // convert seed from hex string to binary
   if (hex2bin(my_seed, strlen(my_seed), seed, sizeof(seed)) != 0) {
     printf("convert seed failed\n");
-    goto done;
-  }
-
-  // convert receiver to binary
-  if (address_from_bech32("atoi", receiver, recv) != 0) {
-    printf("convert receiver address failed\n");
     goto done;
   }
 
@@ -84,7 +79,20 @@ int wallet_send_tx (void) {
     printf("send indexation with address failed\n");
   }
 
+  // check balance at address 0
+  if (wallet_balance_by_index(wallet, 0, &value)) {
+    printf("wallet get balance failed\n");
+    goto done;
+  }
+  printf("balance: %" PRIu64 "\n", value);
+
   // send out 1Mi to recever address
+  // convert receiver to binary
+  if (address_from_bech32("atoi", receiver, recv)) {
+    printf("convert receiver address failed\n");
+    goto done;
+  }
+
   // wallet_send take ed25519 address without the version field.
   if (wallet_send(wallet, 0, recv + 1, 1 * Mi, "iota.c\xF0\x9F\x80\x84", (byte_t *)my_data, strlen(my_data)) != 0) {
     printf("send tx to %s failed\n", receiver);
